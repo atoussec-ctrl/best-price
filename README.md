@@ -8,7 +8,7 @@ A feed-forward neural network **implemented from scratch in NumPy** — forward 
 | `1` `FAIR` | Market price, nothing special |
 | `2` `BEST_PRICE` | A genuine deal — this is what we want to surface |
 
-The softmax output for class 2, $P(\text{BEST\_PRICE})$, doubles as a **ranking score**, so the same model both labels and sorts offers.
+The softmax output for class 2, `P(BEST_PRICE)`, doubles as a **ranking score**, so the same model both labels and sorts offers.
 
 ---
 
@@ -152,9 +152,9 @@ The term $A \cdot G$ is the key: a cheap product with a bad rating is **not** a 
 Labels come from quantile cuts on the score:
 
 $$y = \begin{cases}
-0 \;(\text{OVERPRICED}) & \text{score} < Q_{0.35} \\
-2 \;(\text{BEST\_PRICE}) & \text{score} > Q_{0.80} \\
-1 \;(\text{FAIR}) & \text{otherwise}
+0 \;(\text{overpriced}) & \text{score} < Q_{0.35} \\
+2 \;(\text{best price}) & \text{score} > Q_{0.80} \\
+1 \;(\text{fair}) & \text{otherwise}
 \end{cases}$$
 
 The Gaussian noise $\eta$ is deliberate: it makes the label **partly unpredictable**, so accuracy lands at a believable ~92% instead of a suspicious 98%.
@@ -206,7 +206,7 @@ Then propagating backwards through $l = L \ldots 1$:
 $$\frac{\partial \mathcal{L}}{\partial W^{[l]}} = (A^{[l-1]})^{\top} \delta^{[l]} + \lambda W^{[l]}, \qquad
 \frac{\partial \mathcal{L}}{\partial b^{[l]}} = \sum_i \delta^{[l]}_i$$
 
-$$\delta^{[l-1]} = \left(\delta^{[l]} (W^{[l]})^{\top}\right) \odot \mathbb{1}\!\left[A^{[l-1]} > 0\right]$$
+$$\delta^{[l-1]} = \left(\delta^{[l]} (W^{[l]})^{\top}\right) \odot \mathbf{1}\!\left[A^{[l-1]} > 0\right]$$
 
 where $\odot$ is elementwise multiplication and the indicator is the ReLU derivative. Note it is evaluated on the **activation** rather than the pre-activation — valid because $\text{ReLU}(z) > 0 \iff z > 0$, and it saves storing $Z$.
 
@@ -216,7 +216,11 @@ Because backprop is hand-written, the demo verifies it on every run against a ce
 
 $$\frac{\partial \mathcal{L}}{\partial w} \approx \frac{\mathcal{L}(w + \epsilon) - \mathcal{L}(w - \epsilon)}{2\epsilon}, \qquad \epsilon = 10^{-6}$$
 
-Relative error $\dfrac{|g_{\text{num}} - g_{\text{analytic}}|}{|g_{\text{num}}| + |g_{\text{analytic}}|}$ measures **3.86e-08**, far below the 1e-6 threshold. The central difference is used rather than the forward one because its error is $O(\epsilon^2)$ instead of $O(\epsilon)$.
+The relative error
+
+$$\frac{\left|g_{\text{num}} - g_{\text{analytic}}\right|}{\left|g_{\text{num}}\right| + \left|g_{\text{analytic}}\right|}$$
+
+measures **3.86e-08**, far below the 1e-6 threshold. The central difference is used rather than the forward one because its error is $O(\epsilon^2)$ instead of $O(\epsilon)$.
 
 ### 7.7 Adam optimizer
 
@@ -333,6 +337,17 @@ Headset C       470.00   OVERPRICED     1.000    0.000    0.000
 27/27 passed
 ```
 
+### Documentation tests
+
+The formulas in this file are validated too, since broken math on the repo page is a real defect:
+
+```bash
+npm install katex
+node validate_readme_math.js README.md
+```
+
+It extracts every `$...$` and `$$...$$` expression (86 of them), reproduces GitHub's pre-processing — the Markdown parser consumes backslash escapes, turning `\_` into a bare `_` before KaTeX ever sees it — and renders each one with `throwOnError`. That pre-processing step is precisely what broke `\text{BEST\_PRICE}`, and why class identifiers now appear as inline code rather than inside `\text{}`.
+
 ---
 
 ## 12. Using it with real data
@@ -347,7 +362,7 @@ y = your_labels                    # 0 / 1 / 2
 
 **Getting labels without a labelling team.** Weak supervision works well here: define `BEST_PRICE` as an offer that sat in the bottom decile of its category for at least 48 hours *and* converted above the category median. Noisy, but the network smooths noise, and it beats waiting on hand-annotation.
 
-**Threshold, do not argmax.** In production you rarely want `argmax`. Pick a cutoff on $P(\text{BEST\_PRICE})$ from a precision/recall curve: if a false "great deal" alert costs user trust, a 0.90 cutoff with 60% recall likely beats argmax at 84% recall.
+**Threshold, do not argmax.** In production you rarely want `argmax`. Pick a cutoff on `P(BEST_PRICE)` from a precision/recall curve: if a false "great deal" alert costs user trust, a 0.90 cutoff with 60% recall likely beats argmax at 84% recall.
 
 **Retraining cadence.** Price distributions drift with seasonality. Monitor accuracy weekly and retrain when it decays; the `save`/`load` pair keeps $\mu, \sigma$ bundled with the weights, so an old scaler can never be paired with new weights.
 
